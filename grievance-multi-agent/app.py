@@ -147,16 +147,22 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         )
         status.write("✔ Legal validation completed")
 
-        # -------- Round 4: Structurer --------
+        # -------- Round 4: Structurer (ONLY CHANGE HERE) --------
         status.update(label="📄 Structuring final complaint...")
         progress.progress(90)
-        state["final_report"] = run_structurer(state)
+
+        structurer_raw = run_structurer(state)
+        structured = extract_json(structurer_raw)
+
+        state["short_summary"] = structured["short_summary"]
+        state["final_report"] = structured["detailed_report"]
+
         status.write("✔ Final complaint structured")
 
         progress.progress(100)
         status.update(label="✅ Analysis completed", state="complete")
 
-    # Save result (no duplicate execution)
+    # Save result
     st.session_state["result"] = state
 
 # -------------------------------------------------
@@ -167,7 +173,6 @@ if "result" in st.session_state:
 
     st.divider()
 
-    # -------- Round 1 --------
     st.subheader("🟢 Advocate Agent — Supporting Arguments")
     st.markdown(
         render_arguments_md(
@@ -184,7 +189,6 @@ if "result" in st.session_state:
         )
     )
 
-    # -------- Round 2 --------
     st.subheader("🟢 Advocate Rebuttals")
     st.markdown(
         render_rebuttals_md(
@@ -203,17 +207,14 @@ if "result" in st.session_state:
         )
     )
 
-    # -------- Legal --------
-    st.subheader("⚖️ Legal Assessment (Indian Law)")
+    
     st.markdown(
         render_legal_md(result["legal_validation"])
     )
 
-    # -------- Final Report --------
     st.subheader("📄 Final Complaint / Report")
     st.markdown(result["final_report"])
 
-    # -------- PDF Export --------
     st.divider()
     st.subheader("⬇️ Download Complaint")
 
@@ -231,19 +232,19 @@ if "result" in st.session_state:
         )
 
     # -------------------------------------------------
-    # Redirect + Prefilled Query Params (LOCAL WEBSITE)
+    # Submit section (ONLY CHANGE HERE)
     # -------------------------------------------------
     st.divider()
     st.subheader("🚀 Submit Complaint")
 
     st.text_area(
         "Complaint Summary (Copy this)",
-        value=result["final_report"],
+        value=result["short_summary"],
         height=250
     )
 
     st.link_button(
         "🌐 Open Filing Website",
-        "http://localhost:3000/submit.html",
+        "http://127.0.0.1:5000/",
         use_container_width=True
     )
