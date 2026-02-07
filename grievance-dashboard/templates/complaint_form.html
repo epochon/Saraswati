@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grievance Submission</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            width: 450px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 15px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        textarea {
+            height: 120px;
+            resize: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            background: #3498db;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #2980b9;
+        }
+
+        .dashboard-btn {
+            background: #2ecc71;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .dashboard-btn:hover {
+            background: #27ae60;
+        }
+
+        .result {
+            text-align: center;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📝 Submit Complaint</h1>
+
+    <input type="text" id="name" placeholder="Your Full Name">
+    <input type="text" id="phone" placeholder="Phone Number">
+
+    <textarea id="complaint"
+        placeholder="Describe your issue clearly..."></textarea>
+
+    <button class="submit-btn" onclick="submitComplaint()">Submit Complaint</button>
+
+    <div class="result" id="result"></div>
+
+    <!-- ✅ DASHBOARD BUTTON ADDED BACK -->
+    <button class="dashboard-btn" onclick="goToDashboard()">
+        View Dashboard
+    </button>
+</div>
+
+<script>
+function submitComplaint() {
+    const name = document.getElementById("name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const complaint = document.getElementById("complaint").value.trim();
+
+    if (!complaint) {
+        alert("Complaint cannot be empty");
+        return;
+    }
+
+    fetch("/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: name,
+            phone: phone,
+            complaint: complaint
+        })
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("result").innerText =
+            "✅ Complaint submitted successfully";
+
+        document.getElementById("name").value = "";
+        document.getElementById("phone").value = "";
+        document.getElementById("complaint").value = "";
+    })
+    .catch(() => alert("Submission failed"));
+}
+
+/* 🔗 Dashboard connection */
+function goToDashboard() {
+    window.location.href = "/dashboard";
+}
+</script>
+
+</body>
+</html>

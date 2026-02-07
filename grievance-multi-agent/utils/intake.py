@@ -1,55 +1,48 @@
-# utils/intake.py
-"""
-Responsible ONLY for validating user grievance intake.
-No UI code. No agent code.
-"""
+import re
 
 REQUIRED_FIELDS = {
     "Name": [
-        "my name is",
-        "i am ",
-        "this is ",
+        r"\bmy name is\b",
+        r"\bi am\b"
     ],
-    "Place / Location": [
-        " in ",
-        " at ",
-        " from ",
-        " located in ",
+    "Location": [
+        r"\bi live in\b",
+        r"\bresident of\b",
+        r"\bin\b\s+[A-Za-z ]+"
     ],
-    "What happened": [
-        "happened",
-        "occurred",
-        "issue",
-        "problem",
-        "complaint",
-        "incident",
+    "Incident Description": [
+        r"\bpower outage\b",
+        r"\bno power\b",
+        r"\bissue\b",
+        r"\bproblem\b"
     ],
-    "Who caused the issue": [
-        "by ",
-        "because",
-        "due to",
-        "caused by",
-        "responsible",
+    "Responsible Authority": [
+        r"\bbescom\b",
+        r"\belectricity board\b",
+        r"\bkerala state electricity board\b",
+        r"\bdiscom\b"
     ],
+    "Impact": [
+        r"\baffected\b",
+        r"\bloss\b",
+        r"\bincome\b",
+        r"\bwork\b",
+        r"\bdaily\b"
+    ]
 }
 
 
 def validate_intake(text: str):
     """
-    Validates whether the grievance contains required details.
-
-    Returns:
-        is_valid (bool): True if all required fields are present
-        missing_fields (list[str]): List of missing field names
+    Validates whether the grievance contains semantically required information.
+    Returns (is_valid, missing_fields)
     """
-    if not text or not text.strip():
-        return False, list(REQUIRED_FIELDS.keys())
 
     text = text.lower()
-    missing_fields = []
+    missing = []
 
-    for field, keywords in REQUIRED_FIELDS.items():
-        if not any(keyword in text for keyword in keywords):
-            missing_fields.append(field)
+    for field, patterns in REQUIRED_FIELDS.items():
+        if not any(re.search(p, text) for p in patterns):
+            missing.append(field)
 
-    return len(missing_fields) == 0, missing_fields
+    return len(missing) == 0, missing

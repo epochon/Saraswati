@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grievance Dashboard</title>
+
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f6f8;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .table-container {
+            max-width: 1100px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #34495e;
+            color: white;
+        }
+
+        th, td {
+            padding: 14px 12px;
+            text-align: left;
+        }
+
+        th {
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        tr:hover {
+            background: #eef6ff;
+        }
+
+        td {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        /* Category badges */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+        }
+
+        .fire { background: #e74c3c; }
+        .water { background: #3498db; }
+        .electricity { background: #f1c40f; color: #000; }
+        .legal { background: #9b59b6; }
+        .other { background: #7f8c8d; }
+
+        /* Status badge */
+        .status {
+            background: #2ecc71;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            th {
+                display: none;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 10px;
+            }
+
+            td {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px;
+            }
+
+            td::before {
+                font-weight: bold;
+                color: #555;
+            }
+
+            td:nth-child(1)::before { content: "Name"; }
+            td:nth-child(2)::before { content: "Category"; }
+            td:nth-child(3)::before { content: "Status"; }
+            td:nth-child(4)::before { content: "Complaint"; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>📊 Grievance Dashboard</h1>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Complaint</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in complaints %}
+            <tr>
+                <td>{{ c.name }}</td>
+                <td>
+                    <span class="badge {{ c.category }}">
+                        {{ c.category }}
+                    </span>
+                </td>
+                <td>
+                    <span class="status">{{ c.status }}</span>
+                </td>
+                <td>{{ c.complaint }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
