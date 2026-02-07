@@ -1,17 +1,31 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+
 from utils.pdf import generate_complaint_pdf
+from utils.state import init_state
+from utils.intake import validate_intake
+from utils.json_utils import extract_json
+from utils.render import (
+    render_arguments_md,
+    render_rebuttals_md,
+    render_legal_md
+)
+
+# Agents
+from agents.advocate import run_advocate
+from agents.opposition import run_opposition
+from agents.advocate_rebuttal import run_advocate_rebuttal
+from agents.opposition_rebuttal import run_opposition_rebuttal
+from agents.legal_advisor import run_legal
+from agents.structurer import run_structurer
 
 # -------------------------------------------------
-# Load environment variables safely
+# Load environment variables
 # -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-# -------------------------------------------------
-# Fail fast if no API key exists (Groq is sufficient)
-# -------------------------------------------------
 if not os.getenv("GROQ_API_KEY"):
     st.error(
         "❌ No LLM API key found.\n\n"
@@ -20,19 +34,7 @@ if not os.getenv("GROQ_API_KEY"):
     st.stop()
 
 # -------------------------------------------------
-# Imports AFTER env is loaded
-# -------------------------------------------------
-from utils.state import init_state
-from utils.intake import validate_intake
-from orchestrator import run_debate
-from utils.render import (
-    render_arguments_md,
-    render_rebuttals_md,
-    render_legal_md
-)
-
-# -------------------------------------------------
-# Streamlit UI setup
+# Streamlit config
 # -------------------------------------------------
 st.set_page_config(
     page_title="AI Grievance System (India)",
@@ -43,16 +45,14 @@ st.title("🇮🇳 Multi-Agent AI Grievance System")
 
 st.markdown(
     """
-This system runs a **transparent, multi-round, adversarial AI analysis**.
+This system performs a **transparent, multi-round, adversarial AI analysis**.
 
-### Analysis Phases:
-1. 🟢 Advocate Agent
-2. 🔴 Opposition Agent
-3. 🔁 Rebuttal Round
-4. ⚖️ Legal Validation
+### Analysis Flow
+1. 🟢 Advocate Agent (supports you)
+2. 🔴 Opposition Agent (challenges you)
+3. 🔁 Rebuttal Round (both sides)
+4. ⚖️ Legal Validation (Indian law)
 5. 📄 Complaint Structuring
-
-You can **see progress live** while analysis is running.
 """
 )
 
@@ -72,7 +72,7 @@ user_input = st.text_area(
 )
 
 # -------------------------------------------------
-# Run analysis button
+# Run analysis
 # -------------------------------------------------
 if st.button("Analyze & Generate Complaint", type="primary"):
 
@@ -80,9 +80,8 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         st.warning("⚠️ Please describe your grievance before proceeding.")
         st.stop()
 
-    # ---------------- Intake validation ----------------
+    # -------- Intake validation --------
     is_valid, missing_fields = validate_intake(user_input)
-
     if not is_valid:
         st.error("❌ Your grievance is missing required information.")
         st.markdown("### Please add the following details:")
@@ -90,67 +89,82 @@ if st.button("Analyze & Generate Complaint", type="primary"):
             st.write(f"- **{field}**")
         st.stop()
 
-    # ---------------- Initialize state ----------------
+    # -------- Initialize state --------
     state = init_state(user_input)
+    state["rounds"] = {}
 
-    # ---------------- Live Progress UI ----------------
-    progress_bar = st.progress(0)
+    progress = st.progress(0)
 
     with st.status("🧠 Running multi-agent grievance analysis...", expanded=True) as status:
 
-        # ---- Round 1: Advocate ----
+        # -------- Round 1: Advocate --------
         status.update(label="🟢 Advocate agent analysing grievance...")
-        progress_bar.progress(10)
-        state["rounds"] = {}
-        from agents.advocate import run_advocate
+        progress.progress(10)
         state["rounds"]["advocate_raw"] = run_advocate(state)
         status.write("✔ Advocate agent completed")
 
-        # ---- Round 1: Opposition ----
+        # -------- Round 1: Opposition --------
         status.update(label="🔴 Opposition agent analysing counter-arguments...")
-        progress_bar.progress(30)
-        from agents.opposition import run_opposition
+        progress.progress(30)
         state["rounds"]["opposition_raw"] = run_opposition(state)
         status.write("✔ Opposition agent completed")
 
-        # ---- Round 2: Rebuttals ----
+        # -------- Parse Round 1 JSON (CRITICAL) --------
+        status.update(label="🧩 Parsing Round 1 arguments...")
+        state["rounds"]["advocate"] = extract_json(
+            state["rounds"]["advocate_raw"]
+        )
+        state["rounds"]["opposition"] = extract_json(
+            state["rounds"]["opposition_raw"]
+        )
+        status.write("✔ Round 1 arguments parsed")
+
+        # -------- Round 2: Rebuttals --------
         status.update(label="🔁 Running rebuttal round...")
-        progress_bar.progress(55)
-        from agents.advocate_rebuttal import run_advocate_rebuttal
-        from agents.opposition_rebuttal import run_opposition_rebuttal
+        progress.progress(55)
         state["rounds"]["advocate_rebuttal_raw"] = run_advocate_rebuttal(state)
         state["rounds"]["opposition_rebuttal_raw"] = run_opposition_rebuttal(state)
+
+        state["rounds"]["advocate_rebuttal"] = extract_json(
+            state["rounds"]["advocate_rebuttal_raw"]
+        )
+        state["rounds"]["opposition_rebuttal"] = extract_json(
+            state["rounds"]["opposition_rebuttal_raw"]
+        )
         status.write("✔ Rebuttal round completed")
 
-        # ---- Round 3: Legal Validation ----
+        # -------- Round 3: Legal --------
         status.update(label="⚖️ Legal advisor validating under Indian law...")
-        progress_bar.progress(75)
-        from agents.legal_advisor import run_legal
-        state["legal_validation"] = run_legal(state)
+        progress.progress(75)
+
+        state["legal_validation_raw"] = run_legal(state)
+        state["legal_validation"] = extract_json(
+            state["legal_validation_raw"]
+        )
+
         status.write("✔ Legal validation completed")
 
-        # ---- Round 4: Structuring ----
+        # -------- Round 4: Structurer --------
         status.update(label="📄 Structuring final complaint...")
-        progress_bar.progress(90)
-        from agents.structurer import run_structurer
+        progress.progress(90)
         state["final_report"] = run_structurer(state)
         status.write("✔ Final complaint structured")
 
-        progress_bar.progress(100)
+        progress.progress(100)
         status.update(label="✅ Analysis completed", state="complete")
 
-    # Save result safely
-    st.session_state["result"] = run_debate(init_state(user_input))
+    # Save result (NO duplicate execution)
+    st.session_state["result"] = state
 
 # -------------------------------------------------
-# Display results ONLY if available
+# Display results
 # -------------------------------------------------
 if "result" in st.session_state:
     result = st.session_state["result"]
 
     st.divider()
 
-    # ---------------- Round 1 ----------------
+    # -------- Round 1 --------
     st.subheader("🟢 Advocate Agent — Supporting Arguments")
     st.markdown(
         render_arguments_md(
@@ -167,7 +181,7 @@ if "result" in st.session_state:
         )
     )
 
-    # ---------------- Round 2 ----------------
+    # -------- Round 2 --------
     st.subheader("🟢 Advocate Rebuttals")
     st.markdown(
         render_rebuttals_md(
@@ -186,16 +200,17 @@ if "result" in st.session_state:
         )
     )
 
-    # ---------------- Legal ----------------
+    # -------- Legal --------
+    st.subheader("⚖️ Legal Assessment (Indian Law)")
     st.markdown(
         render_legal_md(result["legal_validation"])
     )
 
-    # ---------------- Final Report ----------------
+    # -------- Final Report --------
     st.subheader("📄 Final Complaint / Report")
     st.markdown(result["final_report"])
 
-    # ---------------- PDF Export ----------------
+    # -------- PDF Export --------
     st.divider()
     st.subheader("⬇️ Download Complaint")
 
