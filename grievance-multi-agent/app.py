@@ -1,24 +1,7 @@
 import os
+import urllib.parse
 import streamlit as st
 from dotenv import load_dotenv
-
-from utils.pdf import generate_complaint_pdf
-from utils.state import init_state
-from utils.intake import validate_intake
-from utils.json_utils import extract_json
-from utils.render import (
-    render_arguments_md,
-    render_rebuttals_md,
-    render_legal_md
-)
-
-# Agents
-from agents.advocate import run_advocate
-from agents.opposition import run_opposition
-from agents.advocate_rebuttal import run_advocate_rebuttal
-from agents.opposition_rebuttal import run_opposition_rebuttal
-from agents.legal_advisor import run_legal
-from agents.structurer import run_structurer
 
 # -------------------------------------------------
 # Load environment variables
@@ -34,7 +17,28 @@ if not os.getenv("GROQ_API_KEY"):
     st.stop()
 
 # -------------------------------------------------
-# Streamlit config
+# Imports AFTER env is loaded
+# -------------------------------------------------
+from utils.state import init_state
+from utils.intake import validate_intake
+from utils.json_utils import extract_json
+from utils.render import (
+    render_arguments_md,
+    render_rebuttals_md,
+    render_legal_md
+)
+from utils.pdf import generate_complaint_pdf
+
+# Agents
+from agents.advocate import run_advocate
+from agents.opposition import run_opposition
+from agents.advocate_rebuttal import run_advocate_rebuttal
+from agents.opposition_rebuttal import run_opposition_rebuttal
+from agents.legal_advisor import run_legal
+from agents.structurer import run_structurer
+
+# -------------------------------------------------
+# Streamlit UI config
 # -------------------------------------------------
 st.set_page_config(
     page_title="AI Grievance System (India)",
@@ -45,14 +49,15 @@ st.title("🇮🇳 Multi-Agent AI Grievance System")
 
 st.markdown(
     """
-This system performs a **transparent, multi-round, adversarial AI analysis**.
+This system performs a **transparent, multi-round, adversarial AI analysis**
+and produces a **submission-ready legal complaint**.
 
 ### Analysis Flow
-1. 🟢 Advocate Agent (supports you)
-2. 🔴 Opposition Agent (challenges you)
-3. 🔁 Rebuttal Round (both sides)
-4. ⚖️ Legal Validation (Indian law)
-5. 📄 Complaint Structuring
+1. 🟢 Advocate Agent  
+2. 🔴 Opposition Agent  
+3. 🔁 Rebuttal Round  
+4. ⚖️ Legal Validation  
+5. 📄 Complaint Structuring  
 """
 )
 
@@ -109,7 +114,7 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         state["rounds"]["opposition_raw"] = run_opposition(state)
         status.write("✔ Opposition agent completed")
 
-        # -------- Parse Round 1 JSON (CRITICAL) --------
+        # -------- Parse Round 1 JSON --------
         status.update(label="🧩 Parsing Round 1 arguments...")
         state["rounds"]["advocate"] = extract_json(
             state["rounds"]["advocate_raw"]
@@ -136,12 +141,10 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         # -------- Round 3: Legal --------
         status.update(label="⚖️ Legal advisor validating under Indian law...")
         progress.progress(75)
-
         state["legal_validation_raw"] = run_legal(state)
         state["legal_validation"] = extract_json(
             state["legal_validation_raw"]
         )
-
         status.write("✔ Legal validation completed")
 
         # -------- Round 4: Structurer --------
@@ -153,7 +156,7 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         progress.progress(100)
         status.update(label="✅ Analysis completed", state="complete")
 
-    # Save result (NO duplicate execution)
+    # Save result (no duplicate execution)
     st.session_state["result"] = state
 
 # -------------------------------------------------
@@ -226,3 +229,21 @@ if "result" in st.session_state:
             file_name="AI_Grievance_Complaint.pdf",
             mime="application/pdf"
         )
+
+    # -------------------------------------------------
+    # Redirect + Prefilled Query Params (LOCAL WEBSITE)
+    # -------------------------------------------------
+    st.divider()
+    st.subheader("🚀 Submit Complaint")
+
+    st.text_area(
+        "Complaint Summary (Copy this)",
+        value=result["final_report"],
+        height=250
+    )
+
+    st.link_button(
+        "🌐 Open Filing Website",
+        "http://localhost:3000/submit.html",
+        use_container_width=True
+    )
