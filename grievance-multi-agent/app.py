@@ -3,60 +3,80 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # -------------------------------------------------
-# Force-load .env using absolute path (Streamlit-safe)
+# Load environment variables safely
 # -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # -------------------------------------------------
-# Validate environment variables early (FAIL FAST)
+# Fail fast if no API key exists
 # -------------------------------------------------
 if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GROQ_API_KEY"):
     st.error(
         "❌ No LLM API key found.\n\n"
-        "Please set GOOGLE_API_KEY or GROQ_API_KEY in your .env file."
+        "Please add GOOGLE_API_KEY or GROQ_API_KEY in your .env file."
     )
     st.stop()
 
 # -------------------------------------------------
-# App imports (AFTER env is loaded)
+# Imports AFTER env is loaded
 # -------------------------------------------------
 from utils.state import init_state
+from utils.intake import validate_intake
 from orchestrator import run_debate
 
 # -------------------------------------------------
 # Streamlit UI
 # -------------------------------------------------
-st.set_page_config(page_title="AI Grievance System (India)", layout="centered")
+st.set_page_config(
+    page_title="AI Grievance System (India)",
+    layout="centered"
+)
 
 st.title("🇮🇳 Multi-Agent AI Grievance System")
 
 st.markdown(
     """
 This system uses **multiple debating AI agents**:
-- 🟢 Advocate (supports you)
-- 🔴 Opposition (challenges your case)
-- ⚖️ Legal Advisor (Indian law)
-- 📄 Structuring Agent (final complaint)
 
-The best outcome emerges through **controlled debate**.
+- 🟢 **Advocate Agent** – argues in your favor  
+- 🔴 **Opposition Agent** – challenges your case  
+- ⚖️ **Legal Advisor** – evaluates under Indian law  
+- 📄 **Structuring Agent** – produces a formal complaint  
+
+⚠️ Your grievance **must include required details** before analysis.
 """
 )
 
 user_input = st.text_area(
     "Describe your grievance",
-    placeholder="Explain the issue, location, authority involved, timeline, and impact...",
-    height=200
+    placeholder=(
+        "Example:\n"
+        "My name is Evan. I live in Kochi, Kerala.\n"
+        "There has been a power cut for 5 days caused by the Electricity Board.\n"
+        "This has affected daily life and work."
+    ),
+    height=220
 )
 
 # -------------------------------------------------
-# Run Debate
+# Run analysis ONLY after intake validation
 # -------------------------------------------------
 if st.button("Analyze & Generate Complaint", type="primary"):
-    if not user_input.strip():
-        st.warning("⚠️ Please describe your grievance before proceeding.")
+
+    is_valid, missing_fields = validate_intake(user_input)
+
+    if not is_valid:
+        st.error("❌ Your grievance is missing required information.")
+        st.markdown("### Please add the following details:")
+        for field in missing_fields:
+            st.write(f"- **{field}**")
+        st.info(
+            "Providing complete information helps generate a legally valid complaint."
+        )
         st.stop()
 
+    # Intake is valid → proceed to agents
     with st.spinner("Running multi-agent legal debate..."):
         state = init_state(user_input)
         result = run_debate(state)
