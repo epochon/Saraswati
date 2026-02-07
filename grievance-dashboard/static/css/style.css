@@ -1,0 +1,25 @@
+body {
+  font-family: Arial;
+  padding: 30px;
+  background: #f4f6f8;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.card {
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  font-size: 18px;
+}
+
+.fire { background: #e74c3c; }
+.water { background: #3498db; }
+.electricity { background: #f1c40f; color: black; }
+.legal { background: #2c3e50; }
+.other { background: #7f8c8d; }
