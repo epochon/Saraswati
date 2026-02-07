@@ -32,7 +32,7 @@ from utils.render import (
 )
 
 # -------------------------------------------------
-# Streamlit UI
+# Streamlit UI setup
 # -------------------------------------------------
 st.set_page_config(
     page_title="AI Grievance System (India)",
@@ -43,16 +43,16 @@ st.title("🇮🇳 Multi-Agent AI Grievance System")
 
 st.markdown(
     """
-This system runs a **structured, adversarial AI debate** to evaluate grievances.
+This system runs a **transparent, multi-round, adversarial AI analysis**.
 
-### Agents involved:
-- 🟢 **Advocate Agent** – supports the user (scored arguments)
-- 🔴 **Opposition Agent** – challenges the user (scored objections)
-- 🔁 **Rebuttal Round** – both sides counter each other
-- ⚖️ **Legal Advisor** – applies Indian law
-- 📄 **Structuring Agent** – produces a formal complaint
+### Analysis Phases:
+1. 🟢 Advocate Agent
+2. 🔴 Opposition Agent
+3. 🔁 Rebuttal Round
+4. ⚖️ Legal Validation
+5. 📄 Complaint Structuring
 
-⚠️ Please provide **clear factual details**.
+You can **see progress live** while analysis is running.
 """
 )
 
@@ -63,15 +63,16 @@ user_input = st.text_area(
     "Describe your grievance",
     placeholder=(
         "Example:\n"
-        "My name is Evan. I live in Kochi, Kerala.\n"
-        "There has been a power cut for 5 days caused by the Electricity Board.\n"
-        "This has affected daily life and work."
+        "My name is Ravi Kumar. I live in Bengaluru.\n"
+        "I filed a complaint to BESCOM on 3 March 2026.\n"
+        "Complaint No: 456789. Power outage lasted 7 days.\n"
+        "This caused loss of income as I work from home."
     ),
     height=220
 )
 
 # -------------------------------------------------
-# Main action
+# Run analysis button
 # -------------------------------------------------
 if st.button("Analyze & Generate Complaint", type="primary"):
 
@@ -79,7 +80,7 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         st.warning("⚠️ Please describe your grievance before proceeding.")
         st.stop()
 
-    # ---------------- Step 1: Intake validation ----------------
+    # ---------------- Intake validation ----------------
     is_valid, missing_fields = validate_intake(user_input)
 
     if not is_valid:
@@ -89,13 +90,60 @@ if st.button("Analyze & Generate Complaint", type="primary"):
             st.write(f"- **{field}**")
         st.stop()
 
-    # ---------------- Step 2: Run debate ----------------
-    with st.spinner("Running multi-agent adversarial debate..."):
-        state = init_state(user_input)
-        st.session_state["result"] = run_debate(state)
+    # ---------------- Initialize state ----------------
+    state = init_state(user_input)
+
+    # ---------------- Live Progress UI ----------------
+    progress_bar = st.progress(0)
+
+    with st.status("🧠 Running multi-agent grievance analysis...", expanded=True) as status:
+
+        # ---- Round 1: Advocate ----
+        status.update(label="🟢 Advocate agent analysing grievance...")
+        progress_bar.progress(10)
+        state["rounds"] = {}
+        from agents.advocate import run_advocate
+        state["rounds"]["advocate_raw"] = run_advocate(state)
+        status.write("✔ Advocate agent completed")
+
+        # ---- Round 1: Opposition ----
+        status.update(label="🔴 Opposition agent analysing counter-arguments...")
+        progress_bar.progress(30)
+        from agents.opposition import run_opposition
+        state["rounds"]["opposition_raw"] = run_opposition(state)
+        status.write("✔ Opposition agent completed")
+
+        # ---- Round 2: Rebuttals ----
+        status.update(label="🔁 Running rebuttal round...")
+        progress_bar.progress(55)
+        from agents.advocate_rebuttal import run_advocate_rebuttal
+        from agents.opposition_rebuttal import run_opposition_rebuttal
+        state["rounds"]["advocate_rebuttal_raw"] = run_advocate_rebuttal(state)
+        state["rounds"]["opposition_rebuttal_raw"] = run_opposition_rebuttal(state)
+        status.write("✔ Rebuttal round completed")
+
+        # ---- Round 3: Legal Validation ----
+        status.update(label="⚖️ Legal advisor validating under Indian law...")
+        progress_bar.progress(75)
+        from agents.legal_advisor import run_legal
+        state["legal_validation"] = run_legal(state)
+        status.write("✔ Legal validation completed")
+
+        # ---- Round 4: Structuring ----
+        status.update(label="📄 Structuring final complaint...")
+        progress_bar.progress(90)
+        from agents.structurer import run_structurer
+        state["final_report"] = run_structurer(state)
+        status.write("✔ Final complaint structured")
+
+        progress_bar.progress(100)
+        status.update(label="✅ Analysis completed", state="complete")
+
+    # Save result safely
+    st.session_state["result"] = run_debate(init_state(user_input))
 
 # -------------------------------------------------
-# DISPLAY RESULTS (only if they exist)
+# Display results ONLY if available
 # -------------------------------------------------
 if "result" in st.session_state:
     result = st.session_state["result"]
