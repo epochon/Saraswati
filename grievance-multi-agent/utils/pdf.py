@@ -3,69 +3,122 @@ from reportlab.platypus import (
     Paragraph,
     Spacer,
     ListFlowable,
-    ListItem
+    ListItem,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
-import os
+from reportlab.lib.enums import TA_LEFT
 import re
+import os
 
 
-def generate_complaint_pdf(markdown_text: str, filename="complaint.pdf") -> str:
-    output_dir = "exports"
-    os.makedirs(output_dir, exist_ok=True)
+def generate_complaint_pdf(content: str, filename="complaint.pdf") -> str:
+    """
+    Generates a well-formatted PDF from Markdown-like text.
+    Returns the path to the generated PDF.
+    """
 
-    path = os.path.join(output_dir, filename)
+    output_path = os.path.join(os.getcwd(), filename)
 
     doc = SimpleDocTemplate(
-        path,
+        output_path,
         pagesize=A4,
-        rightMargin=40,
-        leftMargin=40,
-        topMargin=40,
-        bottomMargin=40
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36,
     )
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(
-        name="Heading",
-        fontSize=14,
-        spaceAfter=12,
-        spaceBefore=12,
-        leading=16,
-        fontName="Helvetica-Bold"
-    ))
-    styles.add(ParagraphStyle(
-        name="Bold",
-        fontSize=10,
-        fontName="Helvetica-Bold"
-    ))
 
-    story = []
+    # --- Custom styles (unique names only) ---
+    styles.add(
+        ParagraphStyle(
+            name="TitleStyle",
+            fontSize=16,
+            leading=20,
+            spaceAfter=14,
+            spaceBefore=10,
+            alignment=TA_LEFT,
+            fontName="Helvetica-Bold",
+        )
+    )
 
-    lines = markdown_text.split("\n")
+    styles.add(
+        ParagraphStyle(
+            name="HeaderStyle",
+            fontSize=13,
+            leading=16,
+            spaceAfter=10,
+            spaceBefore=12,
+            fontName="Helvetica-Bold",
+        )
+    )
+
+    styles.add(
+        ParagraphStyle(
+            name="BodyStyle",
+            fontSize=10.5,
+            leading=14,
+            spaceAfter=8,
+            fontName="Helvetica",
+        )
+    )
+
+    styles.add(
+        ParagraphStyle(
+            name="SmallItalic",
+            fontSize=9.5,
+            leading=12,
+            spaceAfter=8,
+            fontName="Helvetica-Oblique",
+        )
+    )
+
+    flowables = []
+
+    lines = content.splitlines()
     bullet_buffer = []
 
     def flush_bullets():
         nonlocal bullet_buffer
         if bullet_buffer:
-            story.append(
+            flowables.append(
                 ListFlowable(
-                    [ListItem(Paragraph(b, styles["Normal"])) for b in bullet_buffer],
+                    [
+                        ListItem(
+                            Paragraph(item, styles["BodyStyle"])
+                        )
+                        for item in bullet_buffer
+                    ],
                     bulletType="bullet",
-                    start="•"
+                    start="circle",
+                    leftIndent=18,
                 )
             )
             bullet_buffer = []
 
-    for line in lines:
-        line = line.strip()
+    for raw_line in lines:
+        line = raw_line.strip()
 
-        # Headings (## or **1. Title**)
-        if re.match(r"^\*\*\d+\.", line) or line.startswith("**") and line.endswith("**"):
+        # Empty line
+        if not line:
             flush_bullets()
-            story.append(Paragraph(line.strip("*"), styles["Heading"]))
+            flowables.append(Spacer(1, 0.12 * inch))
+            continue
+
+        # Markdown headings
+        if re.match(r"^\*\*.+\*\*$", line):
+            flush_bullets()
+            text = line.strip("*")
+            flowables.append(Paragraph(text, styles["HeaderStyle"]))
+            continue
+
+        # Numbered headings (e.g., "1. Legal Strength Rating")
+        if re.match(r"^\d+\.\s+", line):
+            flush_bullets()
+            flowables.append(Paragraph(line, styles["HeaderStyle"]))
             continue
 
         # Bullet points
@@ -73,28 +126,18 @@ def generate_complaint_pdf(markdown_text: str, filename="complaint.pdf") -> str:
             bullet_buffer.append(line.lstrip("-• ").strip())
             continue
 
-        # Blockquote
-        if line.startswith(">"):
+        # Quoted / note blocks
+        if line.lower().startswith("note:"):
             flush_bullets()
-            story.append(Paragraph(
-                f"<i>{line[1:].strip()}</i>",
-                styles["Normal"]
-            ))
-            story.append(Spacer(1, 0.1 * inch))
+            flowables.append(Paragraph(line, styles["SmallItalic"]))
             continue
 
-        # Empty line
-        if not line:
-            flush_bullets()
-            story.append(Spacer(1, 0.15 * inch))
-            continue
-
-        # Bold text
-        line = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", line)
-
+        # Default paragraph
         flush_bullets()
-        story.append(Paragraph(line, styles["Normal"]))
+        flowables.append(Paragraph(line, styles["BodyStyle"]))
 
     flush_bullets()
-    doc.build(story)
-    return path
+
+    doc.build(flowables)
+
+    return output_path

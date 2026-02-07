@@ -78,6 +78,17 @@ def run_debate(state):
         }
 
     # ---------------- Round 4: Final Structured Report ----------------
-    state["final_report"] = run_structurer(state)
+    structurer_raw = run_structurer(state)
+
+    try:
+        structured = extract_json(structurer_raw)
+    except Exception:
+        raise RuntimeError(
+            "Structurer returned invalid JSON.\n\n"
+            f"Raw output:\n{structurer_raw}"
+        )
+
+    state["short_summary"] = structured["short_summary"]
+    state["final_report"] = structured["detailed_report"]
 
     return state
