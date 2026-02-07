@@ -41,16 +41,22 @@ def home():
 @app.route("/submit", methods=["POST"])
 def submit():
     data = request.json
-    complaint_text = data["complaint"]
-    category = categorize_complaint(complaint_text)
 
     db.collection("complaints").add({
-        "text": complaint_text,
-        "category": category,
-        "status": "OPEN"
+        "consensus_data": {
+            "name": data.get("name", "").strip(),
+            "complaint": data.get("complaint", ""),
+            "category": categorize_complaint(data.get("complaint", "")),
+            "location": "Unknown"
+        },
+        "phone": "9846960356",
+        "metadata": {
+            "protocol": "manual-ui"
+        }
     })
 
-    return jsonify({"category": category})
+    return jsonify({"status": "ok"})
+
 
 
 # ---- Dashboard Stats (NEW) ----
@@ -78,15 +84,45 @@ def stats():
 # ---- Dashboard Page ----
 @app.route("/dashboard")
 def dashboard():
-    complaints_ref = db.collection("complaints").stream()
-
+    docs = db.collection("complaints").stream()
     complaints = []
-    for doc in complaints_ref:
+
+    for doc in docs:
         data = doc.to_dict()
-        data["id"] = doc.id
-        complaints.append(data)
+
+        # Case 1: Agent / Consensus data
+        if "consensus_data" in data:
+            cd = data.get("consensus_data", {})
+            complaints.append({
+                "name": cd.get("name", "—"),
+                "complaint": cd.get("complaint", "—"),
+                "category": cd.get("category", "—"),
+                "location": cd.get("location", "—"),
+                "phone": data.get("phone", "—"),
+                "status": "OPEN"
+            })
+
+        # Case 2: Old / Simple UI submissions
+        else:
+            complaints.append({
+                "name": "—",
+                "complaint": data.get("text", "—"),
+                "category": data.get("category", "—"),
+                "location": "—",
+                "phone": "—",
+                "status": data.get("status", "OPEN")
+            })
 
     return render_template("dashboard.html", complaints=complaints)
+
+
+@app.route("/debug-all")
+def debug_all():
+    docs = db.collection("complaints").stream()
+    out = []
+    for doc in docs:
+        out.append(doc.to_dict())
+    return jsonify(out)
 
 
 if __name__ == "__main__":
