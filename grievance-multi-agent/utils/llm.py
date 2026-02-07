@@ -9,7 +9,7 @@ def get_llm(provider="groq"):
         google_api_key=os.getenv("GOOGLE_API_KEY")
     )
     return ChatGroq(
-        model="openai/gpt-oss-120b",
+        model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
         api_key=os.getenv("GROQ_API_KEY"),
         temperature=0.0
     )
