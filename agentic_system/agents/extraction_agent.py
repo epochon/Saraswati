@@ -1,5 +1,6 @@
 import re
 from llm.gemini_client import gemini_call
+from .utils import safe_json_extract
 
 def extract_info(text):
     response = gemini_call(
