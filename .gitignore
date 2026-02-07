@@ -1,0 +1,64 @@
+# ===============================
+# Environment & Secrets
+# ===============================
+.env
+.env.*
+*.env
+
+# API key backups or accidental exports
+*.key
+*.pem
+*.crt
+secrets.json
+credentials.json
+token.json
+
+# ===============================
+# Python virtual environments
+# ===============================
+venv/
+.venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# ===============================
+# Streamlit
+# ===============================
+.streamlit/
+.streamlit/secrets.toml
+
+# ===============================
+# LangChain / LLM artifacts
+# ===============================
+.cache/
+*.log
+
+# ===============================
+# OS-specific files
+# ===============================
+.DS_Store
+Thumbs.db
+
+# ===============================
+# IDEs & Editors
+# ===============================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===============================
+# Testing / Build
+# ===============================
+dist/
+build/
+*.egg-info/
+
+# ===============================
+# Data & Uploads (optional)
+# ===============================
+data/
+uploads/
