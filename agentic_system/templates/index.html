@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Agentic Complaint System</h2>
+<textarea id="t" rows="8" cols="70"></textarea><br>
+<button onclick="send()">Submit</button>
+<!-- Paste the status check here -->
+{% if result %}
+  {% if result.status == "NEEDS_MORE_INFO" %}
+    <div style="background:#fff3cd; padding:12px; border-radius:6px;">
+      <strong>More information needed</strong>
+      <p>
+        Please add details like:
+        <ul>
+          <li>Exact location of the issue</li>
+          <li>How often the problem occurs</li>
+          <li>Source of the noise</li>
+        </ul>
+      </p>
+    </div>
+  {% else %}
+    <!-- existing debate rendering -->
+  {% endif %}
+{% endif %}
+<pre id="o"></pre>
+<script>
+function send(){
+ fetch("/agent",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({instruction:document.getElementById("t").value})
+ }).then(r=>r.json()).then(d=>{
+   document.getElementById("o").innerText=JSON.stringify(d,null,2);
+ })
+ 
+}
+
+</script>
+</body>
+</html>
