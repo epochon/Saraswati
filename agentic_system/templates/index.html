@@ -1,40 +1,176 @@
 <!DOCTYPE html>
-<html>
-<body>
-<h2>Agentic Complaint System</h2>
-<textarea id="t" rows="8" cols="70"></textarea><br>
-<button onclick="send()">Submit</button>
-<!-- Paste the status check here -->
-{% if result %}
-  {% if result.status == "NEEDS_MORE_INFO" %}
-    <div style="background:#fff3cd; padding:12px; border-radius:6px;">
-      <strong>More information needed</strong>
-      <p>
-        Please add details like:
-        <ul>
-          <li>Exact location of the issue</li>
-          <li>How often the problem occurs</li>
-          <li>Source of the noise</li>
-        </ul>
-      </p>
-    </div>
-  {% else %}
-    <!-- existing debate rendering -->
-  {% endif %}
-{% endif %}
-<pre id="o"></pre>
-<script>
-function send(){
- fetch("/agent",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({instruction:document.getElementById("t").value})
- }).then(r=>r.json()).then(d=>{
-   document.getElementById("o").innerText=JSON.stringify(d,null,2);
- })
- 
-}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Agentic Complaint System</title>
 
+<style>
+    body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #e3f2fd, #f9f9f9);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .container {
+        background: white;
+        width: 90%;
+        max-width: 800px;
+        padding: 30px;
+        border-radius: 14px;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+    }
+
+    h2 {
+        text-align: center;
+        color: #1a237e;
+        margin-bottom: 20px;
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 180px;
+        padding: 16px;
+        font-size: 16px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        resize: vertical;
+        outline: none;
+    }
+
+    textarea:focus {
+        border-color: #1976d2;
+        box-shadow: 0 0 0 2px rgba(25,118,210,0.2);
+    }
+
+    button {
+        display: block;
+        margin: 18px auto 0;
+        background: #1976d2;
+        color: white;
+        padding: 12px 40px;
+        font-size: 16px;
+        border: none;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: background 0.3s, transform 0.1s;
+    }
+
+    button:hover {
+        background: #0d47a1;
+        transform: scale(1.03);
+    }
+
+    #output {
+        margin-top: 20px;
+        font-size: 15px;
+    }
+
+    .success {
+        color: green;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+    }
+
+    .tick {
+        font-size: 26px;
+        animation: pop 0.4s ease-in-out;
+    }
+
+    @keyframes pop {
+        0% { transform: scale(0.4); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .warning {
+        background: #fff3cd;
+        border-left: 6px solid #ff9800;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    .warning ul {
+        margin-top: 8px;
+    }
+
+    pre {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin-top: 15px;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Agentic Complaint System</h2>
+
+    <textarea id="t" placeholder="Write your complaint in natural language...
+
+Example:
+My name is Jaith Jayan. My phone number is 9846960395.
+There is loud noise near my house after 10 PM."></textarea>
+
+    <button onclick="send()">Submit</button>
+
+    <div id="output"></div>
+</div>
+
+<script>
+function send() {
+    const text = document.getElementById("t").value;
+    const output = document.getElementById("output");
+
+    if (!text.trim()) {
+        output.innerHTML = "<div class='warning'>⚠️ Please enter a complaint.</div>";
+        return;
+    }
+
+    output.innerHTML = "⏳ Processing your complaint...";
+
+    fetch("/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: text })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === "SUBMITTED") {
+            output.innerHTML = `
+                <div class="success">
+                    <span class="tick">✔️</span>
+                    Complaint submitted successfully
+                </div>
+            `;
+        }
+        else if (d.status === "NEEDS_MORE_INFO") {
+            output.innerHTML = `
+                <div class="warning">
+                    <strong>More information needed</strong>
+                    <p>Please add details like:</p>
+                    <ul>
+                        <li>Exact location of the issue</li>
+                        <li>How often the problem occurs</li>
+                        <li>Source of the issue</li>
+                    </ul>
+                </div>
+            `;
+        }
+        else {
+            output.innerHTML = "<pre>" + JSON.stringify(d, null, 2) + "</pre>";
+        }
+    });
+}
 </script>
+
 </body>
 </html>
