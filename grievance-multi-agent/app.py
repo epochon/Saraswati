@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+from utils.pdf import generate_complaint_pdf
 
 # -------------------------------------------------
 # Load environment variables safely
@@ -24,7 +25,11 @@ if not os.getenv("GROQ_API_KEY"):
 from utils.state import init_state
 from utils.intake import validate_intake
 from orchestrator import run_debate
-from utils.render import render_arguments_md, render_rebuttals_md, render_legal_md
+from utils.render import (
+    render_arguments_md,
+    render_rebuttals_md,
+    render_legal_md
+)
 
 # -------------------------------------------------
 # Streamlit UI
@@ -74,9 +79,7 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         st.warning("⚠️ Please describe your grievance before proceeding.")
         st.stop()
 
-    # -------------------------------------------------
-    # Step 1: Intake validation
-    # -------------------------------------------------
+    # ---------------- Step 1: Intake validation ----------------
     is_valid, missing_fields = validate_intake(user_input)
 
     if not is_valid:
@@ -86,18 +89,20 @@ if st.button("Analyze & Generate Complaint", type="primary"):
             st.write(f"- **{field}**")
         st.stop()
 
-    # -------------------------------------------------
-    # Step 2: Run multi-agent debate
-    # -------------------------------------------------
+    # ---------------- Step 2: Run debate ----------------
     with st.spinner("Running multi-agent adversarial debate..."):
         state = init_state(user_input)
-        result = run_debate(state)
+        st.session_state["result"] = run_debate(state)
+
+# -------------------------------------------------
+# DISPLAY RESULTS (only if they exist)
+# -------------------------------------------------
+if "result" in st.session_state:
+    result = st.session_state["result"]
 
     st.divider()
 
-    # -------------------------------------------------
-    # Results: Round 1 (Arguments)
-    # -------------------------------------------------
+    # ---------------- Round 1 ----------------
     st.subheader("🟢 Advocate Agent — Supporting Arguments")
     st.markdown(
         render_arguments_md(
@@ -114,9 +119,7 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         )
     )
 
-    # -------------------------------------------------
-    # Results: Round 2 (Rebuttals)
-    # -------------------------------------------------
+    # ---------------- Round 2 ----------------
     st.subheader("🟢 Advocate Rebuttals")
     st.markdown(
         render_rebuttals_md(
@@ -135,13 +138,28 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         )
     )
 
-    # -------------------------------------------------
-    # Results: Legal & Final Output
-    # -------------------------------------------------
-    st.subheader("⚖️ Legal Assessment (Indian Law)")
+    # ---------------- Legal ----------------
     st.markdown(
-    render_legal_md(result["legal_validation"])
-)
+        render_legal_md(result["legal_validation"])
+    )
 
+    # ---------------- Final Report ----------------
     st.subheader("📄 Final Complaint / Report")
     st.markdown(result["final_report"])
+
+    # ---------------- PDF Export ----------------
+    st.divider()
+    st.subheader("⬇️ Download Complaint")
+
+    pdf_path = generate_complaint_pdf(
+        result["final_report"],
+        filename="AI_Grievance_Complaint.pdf"
+    )
+
+    with open(pdf_path, "rb") as f:
+        st.download_button(
+            label="📄 Download Complaint as PDF",
+            data=f,
+            file_name="AI_Grievance_Complaint.pdf",
+            mime="application/pdf"
+        )
