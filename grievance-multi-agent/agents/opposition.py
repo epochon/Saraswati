@@ -1,7 +1,7 @@
 from utils.llm import get_llm
 
 def run_opposition(state):
-    llm = get_llm("groq")
+    llm = get_llm()
     with open("prompts/opposition.txt") as f:
         system_prompt = f.read()
 

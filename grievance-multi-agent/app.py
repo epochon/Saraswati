@@ -9,12 +9,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # -------------------------------------------------
-# Fail fast if no API key exists
+# Fail fast if no API key exists (Groq is sufficient)
 # -------------------------------------------------
-if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GROQ_API_KEY"):
+if not os.getenv("GROQ_API_KEY"):
     st.error(
         "❌ No LLM API key found.\n\n"
-        "Please add GOOGLE_API_KEY or GROQ_API_KEY in your .env file."
+        "Please add GROQ_API_KEY in your .env file."
     )
     st.stop()
 
@@ -24,6 +24,7 @@ if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GROQ_API_KEY"):
 from utils.state import init_state
 from utils.intake import validate_intake
 from orchestrator import run_debate
+from utils.render import render_arguments_md, render_rebuttals_md, render_legal_md
 
 # -------------------------------------------------
 # Streamlit UI
@@ -37,17 +38,22 @@ st.title("🇮🇳 Multi-Agent AI Grievance System")
 
 st.markdown(
     """
-This system uses **multiple debating AI agents**:
+This system runs a **structured, adversarial AI debate** to evaluate grievances.
 
-- 🟢 **Advocate Agent** – argues in your favor  
-- 🔴 **Opposition Agent** – challenges your case  
-- ⚖️ **Legal Advisor** – evaluates under Indian law  
-- 📄 **Structuring Agent** – produces a formal complaint  
+### Agents involved:
+- 🟢 **Advocate Agent** – supports the user (scored arguments)
+- 🔴 **Opposition Agent** – challenges the user (scored objections)
+- 🔁 **Rebuttal Round** – both sides counter each other
+- ⚖️ **Legal Advisor** – applies Indian law
+- 📄 **Structuring Agent** – produces a formal complaint
 
-⚠️ Your grievance **must include required details** before analysis.
+⚠️ Please provide **clear factual details**.
 """
 )
 
+# -------------------------------------------------
+# User input
+# -------------------------------------------------
 user_input = st.text_area(
     "Describe your grievance",
     placeholder=(
@@ -60,10 +66,17 @@ user_input = st.text_area(
 )
 
 # -------------------------------------------------
-# Run analysis ONLY after intake validation
+# Main action
 # -------------------------------------------------
 if st.button("Analyze & Generate Complaint", type="primary"):
 
+    if not user_input.strip():
+        st.warning("⚠️ Please describe your grievance before proceeding.")
+        st.stop()
+
+    # -------------------------------------------------
+    # Step 1: Intake validation
+    # -------------------------------------------------
     is_valid, missing_fields = validate_intake(user_input)
 
     if not is_valid:
@@ -71,26 +84,64 @@ if st.button("Analyze & Generate Complaint", type="primary"):
         st.markdown("### Please add the following details:")
         for field in missing_fields:
             st.write(f"- **{field}**")
-        st.info(
-            "Providing complete information helps generate a legally valid complaint."
-        )
         st.stop()
 
-    # Intake is valid → proceed to agents
-    with st.spinner("Running multi-agent legal debate..."):
+    # -------------------------------------------------
+    # Step 2: Run multi-agent debate
+    # -------------------------------------------------
+    with st.spinner("Running multi-agent adversarial debate..."):
         state = init_state(user_input)
         result = run_debate(state)
 
     st.divider()
 
-    st.subheader("🟢 Advocate Agent (For You)")
-    st.write(result["rounds"]["advocate"])
+    # -------------------------------------------------
+    # Results: Round 1 (Arguments)
+    # -------------------------------------------------
+    st.subheader("🟢 Advocate Agent — Supporting Arguments")
+    st.markdown(
+        render_arguments_md(
+            "Arguments Supporting the Complaint",
+            result["rounds"]["advocate"]["arguments"]
+        )
+    )
 
-    st.subheader("🔴 Opposition Agent (Against You)")
-    st.write(result["rounds"]["opposition"])
+    st.subheader("🔴 Opposition Agent — Critical Observations")
+    st.markdown(
+        render_arguments_md(
+            "Weaknesses in the Complaint",
+            result["rounds"]["opposition"]["arguments"]
+        )
+    )
 
-    st.subheader("⚖️ Legal Advisor (India)")
-    st.write(result["legal_validation"])
+    # -------------------------------------------------
+    # Results: Round 2 (Rebuttals)
+    # -------------------------------------------------
+    st.subheader("🟢 Advocate Rebuttals")
+    st.markdown(
+        render_rebuttals_md(
+            "Responses to Opposition",
+            result["rounds"]["advocate_rebuttal"]["rebuttals"],
+            key="rebuttal"
+        )
+    )
+
+    st.subheader("🔴 Opposition Rebuttals")
+    st.markdown(
+        render_rebuttals_md(
+            "Counter-Responses",
+            result["rounds"]["opposition_rebuttal"]["counter_rebuttals"],
+            key="counter"
+        )
+    )
+
+    # -------------------------------------------------
+    # Results: Legal & Final Output
+    # -------------------------------------------------
+    st.subheader("⚖️ Legal Assessment (Indian Law)")
+    st.markdown(
+    render_legal_md(result["legal_validation"])
+)
 
     st.subheader("📄 Final Complaint / Report")
-    st.write(result["final_report"])
+    st.markdown(result["final_report"])
