@@ -1,0 +1,7 @@
+flask
+twilio
+requests
+firebase-admin
+azure-cognitiveservices-speech
+google-generativeai
+python-dotenv
