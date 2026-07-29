@@ -1,13 +1,3 @@
----
-
-# EpochOn 2.0 – Deliberative Legal & Complaint Assistance System
-
-> **Theme:** Collective Intelligence Under Uncertainty × Responsible Autonomy
-
-A multi-agent, deliberative AI system that assists users with **legal knowledge** and **complaint filing**, while explicitly reasoning, debating internally, and knowing **when not to act**.
-
----
-
 ## 🧩 Problem Statement
 
 ### Lack of Trustworthy, Deliberative Legal & Complaint Assistance Under Uncertainty
