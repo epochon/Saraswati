@@ -1,6 +1,3 @@
-Below is the **FINAL, LOCKED `README.md`** content.
-This is **copy–paste ready**, **judge-facing**, **aligned with your repo structure**, and **matches everything you’ve built and decided**.
-
 ---
 
 # EpochOn 2.0 – Deliberative Legal & Complaint Assistance System
